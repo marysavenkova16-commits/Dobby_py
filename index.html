@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Добби — личный ассистент-эльф</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero__badge">Добби</div>
+      <h1>Личный ассистент-эльф</h1>
+      <p>Напиши Добби команду: добавь задачу, покажи задачи, закрой задачу или сыграй в магическую дуэль.</p>
+    </header>
+
+    <main class="chat-shell">
+      <section class="tasks-panel">
+        <div class="tasks-panel__header">
+          <div class="tasks-panel__title">Запланированные задачи</div>
+          <div class="tasks-panel__hint">Добби показывает текущий список задач прямо здесь. Нажми кнопку, когда задача будет выполнена.</div>
+        </div>
+        <div id="tasks-panel" class="tasks-panel__content">Пока задач нет. Добавь задачу, и Добби сразу покажет её здесь.</div>
+      </section>
+      <section class="trash-panel">
+        <div class="tasks-panel__header">
+          <div class="tasks-panel__title">Корзина</div>
+          <div class="tasks-panel__hint">Восстанови задачу или удали её навсегда.</div>
+        </div>
+        <div id="trash-panel" class="trash-list">Корзина пуста. Удаленные задачи появятся здесь.</div>
+      </section>
+      <div id="chat" class="chat-window"></div>
+      <form id="chat-form" class="chat-form">
+        <input id="chat-input" autocomplete="off" placeholder="Напиши Добби..." />
+        <button type="submit">Отправить</button>
+      </form>
+    </main>
+  </div>
+
+  <div id="confirm-modal" class="modal hidden">
+    <div class="modal__content">
+      <h2>Подтверждение удаления</h2>
+      <p id="confirm-text">Вы уверены, что хотите удалить задачу?</p>
+      <div class="modal__buttons">
+        <button id="confirm-yes" class="modal-button modal-button--confirm">Да</button>
+        <button id="confirm-no" class="modal-button modal-button--cancel">Нет</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
