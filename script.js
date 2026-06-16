@@ -3,6 +3,9 @@ const form = document.getElementById('chat-form');
 const input = document.getElementById('chat-input');
 const tasksPanel = document.getElementById('tasks-panel');
 const trashPanel = document.getElementById('trash-panel');
+const openTrash = document.getElementById('open-trash');
+const closeTrash = document.getElementById('close-trash');
+const trashModal = document.getElementById('trash-modal');
 const confirmModal = document.getElementById('confirm-modal');
 const confirmText = document.getElementById('confirm-text');
 const confirmYes = document.getElementById('confirm-yes');
@@ -95,6 +98,20 @@ confirmYes.addEventListener('click', () => {
 
 confirmNo.addEventListener('click', () => {
   hideConfirm();
+});
+
+openTrash.addEventListener('click', () => {
+  trashModal.classList.remove('hidden');
+});
+
+closeTrash.addEventListener('click', () => {
+  trashModal.classList.add('hidden');
+});
+
+trashModal.addEventListener('click', event => {
+  if (event.target === trashModal) {
+    trashModal.classList.add('hidden');
+  }
 });
 
 function renderTrash(tasks) {

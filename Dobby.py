@@ -324,29 +324,29 @@ def handle_user_message(message):
         replies.extend(pending_replies)
         return replies, tasks
 
-    if re.search(r'выход|пока|заверш|стоп', text):
+    if re.search(r'\b(выход|пока|завершить|стоп)\b', text):
         replies.append('Добби грустит, но будет ждать следующего задания. Возвращайтесь скорее, великий Мастер!')
         return replies, tasks
 
     try:
-        if re.search(r'добав|нов|запис|поставь', text):
+        if re.search(r'\b(добав|добавить|новая|записать|поставить)\b', text):
             replies.append(add_task_from_message(text, tasks))
             return replies, tasks
 
-        if re.search(r'покаж|список|задач', text):
+        if re.search(r'\b(показать|покажи|список|задачи)\b', text):
             replies.append(describe_tasks(tasks))
             return replies, tasks
 
-        if re.search(r'выпол|сдела|готов|закрыт|закрыть', text):
+        if re.search(r'\b(выполнить|сделал|готово|закрыть)\b', text):
             replies.append(complete_task_from_message(text, tasks))
             return replies, tasks
 
-        if re.search(r'игр|дуэл|дуэль|магическ|магия', text):
+        if re.search(r'\b(игра|дуэль|магия)\b', text):
             session_state['waiting_for_spell'] = True
             replies.append('Добби готовится к магической дуэли! Назови заклинание: Экспеллиармус, Ступефай или Протего.')
             return replies, tasks
 
-        if re.search(r'шоколад|лягуш', text):
+        if re.search(r'\b(шоколад|лягушка)\b', text):
             replies.append(f'У тебя {session_state["bonus_frogs"]} шоколадных лягушек. Добби очень горд!')
             return replies, tasks
 
