@@ -12,15 +12,14 @@
 body {
   margin: 0;
   min-height: 100vh;
-  height: 100vh;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .page-shell {
   max-width: 980px;
   margin: 0 auto;
   padding: 20px;
-  height: 100%;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
@@ -65,6 +64,7 @@ body {
   grid-template-rows: 1fr;
   gap: 18px;
   min-height: calc(100vh - 220px);
+  max-height: calc(100vh - 220px);
 }
 
 .tasks-panel {
@@ -183,7 +183,7 @@ body {
 .chat-window {
   padding: 24px;
   overflow-y: auto;
-  max-height: calc(100vh - 260px);
+  max-height: calc(100vh - 300px);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 30px 30px 20px 20px;
   background: rgba(10, 18, 32, 0.9);
@@ -247,6 +247,10 @@ body {
   border-radius: 24px;
   background: rgba(10, 18, 32, 0.9);
   overflow: hidden;
+}
+
+.page-shell {
+  overflow: visible;
 }
 
 .chat-window {

@@ -158,7 +158,7 @@ def describe_tasks(tasks):
 
 # Добавление задачи из текстовой команды.
 def get_task_title_from_message(message):
-    title = re.sub(r'\b(добавь|добав|нов|запис|поставь|задачу|задач)\b', '', message, flags=re.IGNORECASE).strip(' .,-')
+    title = re.sub(r'\b(добавь|добави|добавить|новая|новую|новой|нов|запис|поставь|задачу|задач)\b', '', message, flags=re.IGNORECASE).strip(' .,-')
     return title or None
 
 def create_task(title, deadline, tasks):
@@ -324,12 +324,13 @@ def handle_user_message(message):
         replies.extend(pending_replies)
         return replies, tasks
 
-    if re.search(r'\b(выход|пока|завершить|стоп)\b', text):
+    # Проверяем выход ТОЛЬКО если это точное слово "пока", не часть другого слова
+    if re.search(r'^пока\b|[^а-яё]пока\b', text):
         replies.append('Добби грустит, но будет ждать следующего задания. Возвращайтесь скорее, великий Мастер!')
         return replies, tasks
 
     try:
-        if re.search(r'\b(добав|добавить|новая|записать|поставить)\b', text):
+        if re.search(r'\b(добавь|добави|добавить|новая|новую|новой|нов|запис|поставь)\b', text):
             replies.append(add_task_from_message(text, tasks))
             return replies, tasks
 
