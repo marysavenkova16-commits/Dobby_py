@@ -20,6 +20,9 @@ session_state = {
     'dialog_active': False,
     'awaiting_intent': False,
     'pending_complete': False,
+    # Флаги для двухэтапного закрытия задачи (выбор + подтверждение)
+    'pending_close_task': None,  # Задача, ожидающая подтверждения
+    'awaiting_close_confirmation': False,  # Ожидаем подтверждение да/нет
     # Ожидающие уведомления о просроченных задачах
     'pending_notifications': [],
 }
@@ -291,6 +294,42 @@ def complete_task_from_message(message, tasks):
     save_tasks(tasks)
     return 'О, как хорошо! Добби так старался, что у него слезы счастья на глазах.'
 
+# Поиск задачи по названию или номеру.
+def find_task_by_message(message, tasks):
+    query = message.lower()
+    index_match = re.search(r'\d+', query)
+    chosen_index = None
+    if index_match:
+        index = int(index_match.group(0)) - 1
+        if 0 <= index < len(tasks):
+            chosen_index = index
+
+    if chosen_index is None:
+        for i, task in enumerate(tasks):
+            task_title_lower = task['title'].lower()
+            # Проверяем совпадение: либо название в запросе, либо часть запроса в названии
+            if query in task_title_lower or task_title_lower in query:
+                chosen_index = i
+                break
+
+    return chosen_index
+
+# Закрытие задачи с подтверждением.
+def close_task_with_confirmation(message, tasks):
+    task_index = find_task_by_message(message, tasks)
+
+    if task_index is None:
+        raise ValueError('Добби не нашел задачу. Назови номер или часть названия.')
+
+    task = tasks[task_index]
+    if task['status'] == 'done':
+        return 'Добби уже отмечал эту задачу выполненной. Мастер очень внимателен!'
+
+    # Сохраняем индекс задачи для подтверждения
+    session_state['pending_close_task'] = task_index
+    session_state['awaiting_close_confirmation'] = True
+    return f'Вы хотите закрыть задачу "{task["title"]}"? (Ответьте "да" или "нет")'
+
 # Игровая магическая дуэль.
 def resolve_spell_duel(choice, tasks):
     spells = {
@@ -358,10 +397,33 @@ def handle_user_message(message):
             replies.append(str(e))
             return replies, tasks
 
+    # Обработка подтверждения закрытия задачи (да/нет)
+    if session_state.get('awaiting_close_confirmation'):
+        answer = text.strip().lower()
+        if answer == 'да':
+            # Подтверждение - закрываем задачу
+            task_index = session_state['pending_close_task']
+            if 0 <= task_index < len(tasks):
+                tasks[task_index]['status'] = 'done'
+                save_tasks(tasks)
+            replies.append('О, как хорошо! Добби так старался, что у него слезы счастья на глазах.')
+            session_state['awaiting_close_confirmation'] = False
+            session_state['pending_close_task'] = None
+            return replies, tasks
+        elif answer == 'нет':
+            # Отмена
+            replies.append('Закрытие задачи отменяется.')
+            session_state['awaiting_close_confirmation'] = False
+            session_state['pending_close_task'] = None
+            return replies, tasks
+        else:
+            replies.append('Добби не понял ответ. Напиши "да" или "нет".')
+            return replies, tasks
+
     # Обработка ожидания выбора задачи для закрытия
     if session_state.get('pending_complete'):
         try:
-            replies.append(complete_task_from_message(message.strip(), tasks))
+            replies.append(close_task_with_confirmation(message.strip(), tasks))
         except ValueError as e:
             replies.append(str(e))
             return replies, tasks
@@ -376,9 +438,44 @@ def handle_user_message(message):
         session_state['awaiting_intent'] = False
         return replies, tasks
 
-    # Если мы только начали диалог — сначала уточняем, чего хочет Мастер
+    # Если мы только начали диалог — обрабатываем команду или уточняем намерение
     if not session_state.get('dialog_active'):
         session_state['dialog_active'] = True
+        
+        # Проверяем, есть ли явная команда
+        # Добавление
+        if re.search(r'\b(добав|добавь|добавить|новая|новую|запис)\b', text):
+            session_state['awaiting_intent'] = False
+            replies.append(add_task_from_message(text, tasks))
+            return replies, tasks
+
+        # Показать
+        if re.search(r'\b(показать|покажи|список|задачи)\b', text):
+            session_state['awaiting_intent'] = False
+            replies.append(describe_tasks(tasks))
+            return replies, tasks
+
+        # Закрыть задачу
+        if re.search(r'\b(выполнить|сделал|готово|закрыть|закрой)\b', text):
+            session_state['awaiting_intent'] = False
+            if re.search(r'\d+', text):
+                try:
+                    replies.append(close_task_with_confirmation(text, tasks))
+                except ValueError as e:
+                    replies.append(str(e))
+            else:
+                session_state['pending_complete'] = True
+                replies.append('Какую задачу нужно закрыть? Назови номер или часть названия.')
+            return replies, tasks
+
+        # Игра/дуэль
+        if re.search(r'\b(игра|дуэль|магия)\b', text):
+            session_state['awaiting_intent'] = False
+            session_state['waiting_for_spell'] = True
+            replies.append('Добби готовится к магической дуэли! Назови заклинание: Экспеллиармус, Ступефай или Протего.')
+            return replies, tasks
+        
+        # Иначе спрашиваем уточнение
         session_state['awaiting_intent'] = True
         replies.append('Добби слушает. Что вы хотите сделать? Скажи: добавь задачу, покажи задачи, закрой задачу или игра.')
         return replies, tasks
@@ -399,16 +496,16 @@ def handle_user_message(message):
                 return replies, tasks
 
             # Закрыть задачу
-            if re.search(r'\b(выполнить|сделал|готово|закрыть)\b', text):
+            if re.search(r'\b(выполнить|сделал|готово|закрыть|закрой)\b', text):
                 # Если в фразе есть номер — закроем; иначе попросим уточнить номер/название
                 if re.search(r'\d+', text):
                     try:
-                        replies.append(complete_task_from_message(text, tasks))
+                        replies.append(close_task_with_confirmation(text, tasks))
                     except ValueError as e:
                         replies.append(str(e))
                     return replies, tasks
                 session_state['pending_complete'] = True
-                replies.append('Какая задача выполнена? Назови номер или часть названия.')
+                replies.append('Какую задачу нужно закрыть? Назови номер или часть названия.')
                 return replies, tasks
 
             # Игра/дуэль
@@ -431,8 +528,15 @@ def handle_user_message(message):
             replies.append(describe_tasks(tasks))
             return replies, tasks
 
-        if re.search(r'\b(выполнить|сделал|готово|закрыть)\b', text):
-            replies.append(complete_task_from_message(text, tasks))
+        if re.search(r'\b(выполнить|сделал|готово|закрыть|закрой)\b', text):
+            if re.search(r'\d+', text):
+                try:
+                    replies.append(close_task_with_confirmation(text, tasks))
+                except ValueError as e:
+                    replies.append(str(e))
+            else:
+                session_state['pending_complete'] = True
+                replies.append('Какую задачу нужно закрыть? Назови номер или часть названия.')
             return replies, tasks
 
         if re.search(r'\b(игра|дуэль|магия)\b', text):
