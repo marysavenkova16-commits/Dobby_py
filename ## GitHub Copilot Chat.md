@@ -1,7 +1,7 @@
 ## GitHub Copilot Chat
 
-- Extension: 0.52.0 (prod)
-- VS Code: 1.124.2 (6928394f91b684055b873eecb8bc281365131f1c)
+- Extension: 0.53.1 (prod)
+- VS Code: 1.125.1 (fcf604774b9f2674b473065736ee75077e256353)
 - OS: win32 10.0.26200 x64
 - GitHub Account: marysavenkova16-commits
 
@@ -16,36 +16,36 @@ User Settings:
 ```
 
 Connecting to https://api.github.com:
-- DNS ipv4 Lookup: 140.82.121.5 (4 ms)
-- DNS ipv6 Lookup: Error (24 ms): getaddrinfo ENOTFOUND api.github.com
+- DNS ipv4 Lookup: 140.82.121.5 (6 ms)
+- DNS ipv6 Lookup: Error (6 ms): getaddrinfo ENOTFOUND api.github.com
 - Proxy URL: None (4 ms)
-- Electron fetch (configured): HTTP 200 (70 ms)
-- Node.js https: HTTP 200 (365 ms)
-- Node.js fetch: HTTP 200 (73 ms)
+- Electron fetch (configured): HTTP 200 (179 ms)
+- Node.js https: HTTP 200 (332 ms)
+- Node.js fetch: HTTP 200 (225 ms)
 
 Connecting to https://api.githubcopilot.com/_ping:
-- DNS ipv4 Lookup: 140.82.114.21 (2 ms)
+- DNS ipv4 Lookup: 140.82.113.21 (54 ms)
 - DNS ipv6 Lookup: Error (2 ms): getaddrinfo ENOTFOUND api.githubcopilot.com
-- Proxy URL: None (4 ms)
-- Electron fetch (configured): HTTP 200 (161 ms)
+- Proxy URL: None (2 ms)
+- Electron fetch (configured): HTTP 200 (158 ms)
 - Node.js https: HTTP 200 (481 ms)
-- Node.js fetch: HTTP 200 (503 ms)
+- Node.js fetch: HTTP 200 (473 ms)
 
 Connecting to https://copilot-proxy.githubusercontent.com/_ping:
-- DNS ipv4 Lookup: 4.225.11.192 (24 ms)
-- DNS ipv6 Lookup: Error (25 ms): getaddrinfo ENOTFOUND copilot-proxy.githubusercontent.com
-- Proxy URL: None (3 ms)
-- Electron fetch (configured): HTTP 200 (400 ms)
-- Node.js https: HTTP 200 (294 ms)
-- Node.js fetch: HTTP 200 (300 ms)
+- DNS ipv4 Lookup: 4.225.11.192 (25 ms)
+- DNS ipv6 Lookup: Error (22 ms): getaddrinfo ENOTFOUND copilot-proxy.githubusercontent.com
+- Proxy URL: None (4 ms)
+- Electron fetch (configured): HTTP 200 (283 ms)
+- Node.js https: HTTP 200 (271 ms)
+- Node.js fetch: HTTP 200 (286 ms)
 
-Connecting to https://mobile.events.data.microsoft.com: HTTP 404 (170 ms)
-Connecting to https://dc.services.visualstudio.com: HTTP 404 (413 ms)
-Connecting to https://copilot-telemetry.githubusercontent.com/_ping: HTTP 200 (486 ms)
-Connecting to https://copilot-telemetry.githubusercontent.com/_ping: HTTP 200 (530 ms)
-Connecting to https://default.exp-tas.com: HTTP 400 (313 ms)
+Connecting to https://mobile.events.data.microsoft.com: HTTP 404 (60 ms)
+Connecting to https://dc.services.visualstudio.com: HTTP 404 (380 ms)
+Connecting to https://copilot-telemetry.githubusercontent.com/_ping: HTTP 200 (481 ms)
+Connecting to https://copilot-telemetry.githubusercontent.com/_ping: HTTP 200 (477 ms)
+Connecting to https://default.exp-tas.com: HTTP 400 (311 ms)
 
-Number of system certificates: 93
+Number of system certificates: 95
 
 ## Documentation
 

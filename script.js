@@ -228,3 +228,49 @@ form.addEventListener('submit', event => {
 
 addMessage('Добби очень рад видеть великого Мастера! Напиши команду: добавь задачу, покажи задачи, закрой задачу или игра.', 'bot');
 loadTasks();
+
+// Воспроизвести короткую сирену через WebAudio
+function playSiren() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(800, ctx.currentTime);
+    o.connect(g);
+    g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
+
+    // Простая имитация сирены: частота меняется
+    o.frequency.linearRampToValueAtTime(1200, ctx.currentTime + 0.25);
+    o.frequency.linearRampToValueAtTime(600, ctx.currentTime + 0.5);
+    o.start();
+    setTimeout(() => {
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.02);
+      o.stop(ctx.currentTime + 0.03);
+      ctx.close();
+    }, 600);
+  } catch (e) {
+    console.warn('Audio not available', e);
+  }
+}
+
+// Опрос сервера на предмет новых уведомлений о просроченных задачах
+async function pollNotifications() {
+  try {
+    const resp = await fetch('/api/notifications');
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (!data.notifications || !data.notifications.length) return;
+    data.notifications.forEach(n => {
+      // Показать сообщение с эмодзи сирены и заголовком задачи
+      showReplies([`${n.emoji} ${n.title} — Внимание!`]);
+      playSiren();
+    });
+  } catch (e) {
+    // молча игнорируем ошибки опроса
+  }
+}
+
+setInterval(pollNotifications, 5000);

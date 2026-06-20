@@ -4,6 +4,7 @@ import random
 import re
 import os
 import time
+import threading
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
 
@@ -15,7 +16,36 @@ session_state = {
     'waiting_for_spell': False,
     'bonus_frogs': 0,
     'pending_task': None,
+    # Новые флаги для управления шагом уточнения намерения
+    'dialog_active': False,
+    'awaiting_intent': False,
+    'pending_complete': False,
+    # Ожидающие уведомления о просроченных задачах
+    'pending_notifications': [],
 }
+
+
+def check_for_newly_late_tasks():
+    """Проверяет задачи и возвращает только те, которые только что стали просроченными."""
+    tasks = load_tasks()
+    now = datetime.datetime.now()
+    newly_late = []
+    updated = False
+    for task in tasks:
+        if task['status'] == 'pending':
+            try:
+                deadline = datetime.datetime.fromisoformat(task['deadline'])
+            except ValueError:
+                continue
+            if now > deadline:
+                task['status'] = 'late'
+                newly_late.append(task)
+                updated = True
+
+    if updated:
+        save_tasks(tasks)
+
+    return newly_late
 
 # Загрузка списка задач из файла. Если файла нет — возвращаем пустой список.
 def load_tasks():
@@ -320,16 +350,79 @@ def handle_user_message(message):
         return replies, tasks
 
     if session_state.get('pending_task'):
-        pending_replies, tasks = handle_pending_task(message.strip(), tasks)
-        replies.extend(pending_replies)
+        try:
+            pending_replies, tasks = handle_pending_task(message.strip(), tasks)
+            replies.extend(pending_replies)
+            return replies, tasks
+        except ValueError as e:
+            replies.append(str(e))
+            return replies, tasks
+
+    # Обработка ожидания выбора задачи для закрытия
+    if session_state.get('pending_complete'):
+        try:
+            replies.append(complete_task_from_message(message.strip(), tasks))
+        except ValueError as e:
+            replies.append(str(e))
+            return replies, tasks
+        session_state['pending_complete'] = False
         return replies, tasks
 
     # Проверяем выход ТОЛЬКО если это точное слово "пока", не часть другого слова
     if re.search(r'^пока\b|[^а-яё]пока\b', text):
         replies.append('Добби грустит, но будет ждать следующего задания. Возвращайтесь скорее, великий Мастер!')
+        # При завершении диалога сбрасываем контекст уточнения намерения
+        session_state['dialog_active'] = False
+        session_state['awaiting_intent'] = False
+        return replies, tasks
+
+    # Если мы только начали диалог — сначала уточняем, чего хочет Мастер
+    if not session_state.get('dialog_active'):
+        session_state['dialog_active'] = True
+        session_state['awaiting_intent'] = True
+        replies.append('Добби слушает. Что вы хотите сделать? Скажи: добавь задачу, покажи задачи, закрой задачу или игра.')
         return replies, tasks
 
     try:
+        # Если ждем, пока пользователь выберет намерение — определяем его и предлагаем дальнейшее действие
+        if session_state.get('awaiting_intent'):
+            session_state['awaiting_intent'] = False
+            # Добавление
+            if re.search(r'\b(добав|добавь|добавить|новая|новую|запис)\b', text):
+                # Попробуем сразу распарсить команду; если данных нет — начнется пошаговый ввод
+                replies.append(add_task_from_message(text, tasks))
+                return replies, tasks
+
+            # Показать
+            if re.search(r'\b(показать|покажи|список|задачи)\b', text):
+                replies.append(describe_tasks(tasks))
+                return replies, tasks
+
+            # Закрыть задачу
+            if re.search(r'\b(выполнить|сделал|готово|закрыть)\b', text):
+                # Если в фразе есть номер — закроем; иначе попросим уточнить номер/название
+                if re.search(r'\d+', text):
+                    try:
+                        replies.append(complete_task_from_message(text, tasks))
+                    except ValueError as e:
+                        replies.append(str(e))
+                    return replies, tasks
+                session_state['pending_complete'] = True
+                replies.append('Какая задача выполнена? Назови номер или часть названия.')
+                return replies, tasks
+
+            # Игра/дуэль
+            if re.search(r'\b(игра|дуэль|магия)\b', text):
+                session_state['waiting_for_spell'] = True
+                replies.append('Добби готовится к магической дуэли! Назови заклинание: Экспеллиармус, Ступефай или Протего.')
+                return replies, tasks
+
+            # Если не распознали — предложим варианты снова
+            session_state['awaiting_intent'] = True
+            replies.append('Добби не понял выбор. Скажи: добавь задачу, покажи задачи, закрой задачу или игра.')
+            return replies, tasks
+
+        # Обычная логика определения намерений (если диалог уже открыт и нет ожиданий)
         if re.search(r'\b(добавь|добави|добавить|новая|новую|новой|нов|запис|поставь)\b', text):
             replies.append(add_task_from_message(text, tasks))
             return replies, tasks
@@ -376,6 +469,19 @@ class DobbyHandler(SimpleHTTPRequestHandler):
                     for task in tasks
                 ]
             }
+            response_body = json.dumps(response, ensure_ascii=False).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Content-Length', str(len(response_body)))
+            self.end_headers()
+            self.wfile.write(response_body)
+            return
+
+        if self.path == '/api/notifications':
+            # Отдать накопленные уведомления и очистить очередь
+            notes = list(session_state.get('pending_notifications', []))
+            session_state['pending_notifications'] = []
+            response = {'notifications': notes}
             response_body = json.dumps(response, ensure_ascii=False).encode('utf-8')
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
@@ -494,6 +600,25 @@ def run_server():
     os.chdir(BASE_DIR)
     server_address = ('', PORT)
     httpd = HTTPServer(server_address, DobbyHandler)
+    # Запускаем фоновой воркер для обнаружения наступления дедлайнов
+    def notification_worker():
+        while True:
+            try:
+                newly = check_for_newly_late_tasks()
+                if newly:
+                    for task in newly:
+                        note = {
+                            'title': task['title'],
+                            'emoji': '🚨',
+                            'message': f"Внимание: задача '{task['title']}' просрочена!"
+                        }
+                        session_state['pending_notifications'].append(note)
+            except Exception:
+                pass
+            time.sleep(5)
+
+    t = threading.Thread(target=notification_worker, daemon=True)
+    t.start()
     print(f'Добби ждет великого Мастера на сайте: http://localhost:{PORT}/')
     try:
         httpd.serve_forever()
